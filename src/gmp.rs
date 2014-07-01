@@ -509,7 +509,6 @@ impl fmt::Show for Mpz {
     }
 }
 
-
 pub struct RandState {
     state: gmp_randstate_struct,
 }
@@ -784,6 +783,12 @@ impl Zero for Mpq {
     fn zero() -> Mpq { Mpq::new() }
     fn is_zero(&self) -> bool {
         unsafe { __gmpq_cmp_ui(&self.mpq, 0, 1) == 0 }
+    }
+}
+
+impl fmt::Show for Mpq {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}/{}", self.get_num(), self.get_den())
     }
 }
 
