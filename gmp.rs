@@ -282,7 +282,7 @@ impl Clone for Mpz {
     }
 }
 
-impl cmp::Eq for Mpz {
+impl cmp::PartialEq for Mpz {
     fn eq(&self, other: &Mpz) -> bool {
         unsafe { __gmpz_cmp(&self.mpz, &other.mpz) == 0 }
     }
@@ -291,7 +291,7 @@ impl cmp::Eq for Mpz {
     }
 }
 
-impl cmp::Ord for Mpz {
+impl cmp::PartialOrd for Mpz {
     fn lt(&self, other: &Mpz) -> bool {
         unsafe { __gmpz_cmp(&self.mpz, &other.mpz) < 0 }
     }
@@ -667,7 +667,7 @@ impl Clone for Mpq {
     }
 }
 
-impl cmp::Eq for Mpq {
+impl cmp::PartialEq for Mpq {
     fn eq(&self, other: &Mpq) -> bool {
         unsafe { __gmpq_equal(&self.mpq, &other.mpq) != 0 }
     }
@@ -676,7 +676,7 @@ impl cmp::Eq for Mpq {
     }
 }
 
-impl cmp::Ord for Mpq {
+impl cmp::PartialOrd for Mpq {
     fn lt(&self, other: &Mpq) -> bool {
         unsafe { __gmpq_cmp(&self.mpq, &other.mpq) < 0 }
     }
@@ -863,7 +863,7 @@ impl Clone for Mpf {
     }
 }
 
-impl cmp::Eq for Mpf {
+impl cmp::PartialEq for Mpf {
     fn eq(&self, other: &Mpf) -> bool {
         unsafe { __gmpf_cmp(&self.mpf, &other.mpf) == 0 }
     }
@@ -872,7 +872,7 @@ impl cmp::Eq for Mpf {
     }
 }
 
-impl cmp::Ord for Mpf {
+impl cmp::PartialOrd for Mpf {
     fn lt(&self, other: &Mpf) -> bool {
         unsafe { __gmpf_cmp(&self.mpf, &other.mpf) < 0 }
     }
