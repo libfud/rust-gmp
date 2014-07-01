@@ -1,22 +1,24 @@
-#[crate_id = "gmp#0.1.0"];
+#![crate_id = "gmp#0.1.0"]
 
-#[comment = "gmp bindings"];
-#[license = "MIT"];
-#[crate_type = "lib"];
+#![comment = "gmp bindings"]
+#![license = "MIT"]
+#![crate_type = "lib"]
 
-#[feature(globs)];
-#[allow(non_camel_case_types)];
+#![feature(globs)]
+#![allow(non_camel_case_types)]
 
-use std::libc::{c_char, c_double, c_int, c_long, c_ulong, c_void, size_t};
+extern crate libc;
+
+use libc::{c_char, c_double, c_int, c_long, c_ulong, c_void, size_t};
 use std::num::{One, Zero, ToStrRadix};
-use std::mem::{uninit,size_of};
-use std::{cmp, fmt, slice};
+use std::mem::{uninitialized,size_of};
+use std::{cmp, fmt};
 use std::from_str::FromStr;
 
 struct mpz_struct {
     _mp_alloc: c_int,
     _mp_size: c_int,
-    _mp_d: *c_void
+    _mp_d: *const c_void
 }
 
 struct mpq_struct {
@@ -30,21 +32,21 @@ struct mpf_struct {
     _mp_prec: c_int,
     _mp_size: c_int,
     _mp_exp: mp_exp_t,
-    _mp_d: *c_void
+    _mp_d: *const c_void
 }
 
 struct gmp_randstate_struct {
     _mp_seed: mpz_struct,
     _mp_alg: c_int,
-    _mp_algdata: *c_void
+    _mp_algdata: *const c_void
 }
 
 type mp_bitcnt_t = c_ulong;
-type mpz_srcptr = *mpz_struct;
+type mpz_srcptr = *const mpz_struct;
 type mpz_ptr = *mut mpz_struct;
-type mpq_srcptr = *mpq_struct;
+type mpq_srcptr = *const mpq_struct;
 type mpq_ptr = *mut mpq_struct;
-type mpf_srcptr = *mpf_struct;
+type mpf_srcptr = *const mpf_struct;
 type mpf_ptr = *mut mpf_struct;
 type gmp_randstate_t = *mut gmp_randstate_struct;
 
@@ -54,12 +56,12 @@ extern "C" {
     fn __gmpz_init2(x: mpz_ptr, n: mp_bitcnt_t);
     fn __gmpz_init_set(rop: mpz_ptr, op: mpz_srcptr);
     fn __gmpz_init_set_ui(rop: mpz_ptr, op: c_ulong);
-    fn __gmpz_init_set_str(rop: mpz_ptr, str: *c_char, base: c_int) -> c_int;
+    fn __gmpz_init_set_str(rop: mpz_ptr, str: *const c_char, base: c_int) -> c_int;
     fn __gmpz_clear(x: mpz_ptr);
     fn __gmpz_realloc2(x: mpz_ptr, n: mp_bitcnt_t);
     fn __gmpz_set(rop: mpz_ptr, op: mpz_srcptr);
-    fn __gmpz_set_str(rop: mpz_ptr, str: *c_char, base: c_int) -> c_int;
-    fn __gmpz_get_str(str: *mut c_char, base: c_int, op: mpz_srcptr) -> *c_char;
+    fn __gmpz_set_str(rop: mpz_ptr, str: *const c_char, base: c_int) -> c_int;
+    fn __gmpz_get_str(str: *mut c_char, base: c_int, op: mpz_srcptr) -> *const c_char;
     fn __gmpz_sizeinbase(op: mpz_srcptr, base: c_int) -> size_t;
     fn __gmpz_cmp(op1: mpz_srcptr, op2: mpz_srcptr) -> c_int;
     fn __gmpz_cmp_ui(op1: mpz_srcptr, op2: c_ulong) -> c_int;
@@ -87,12 +89,12 @@ extern "C" {
     fn __gmpz_lcm(rop: mpz_ptr, op1: mpz_srcptr, op2: mpz_srcptr);
     fn __gmpz_invert(rop: mpz_ptr, op1: mpz_srcptr, op2: mpz_srcptr) -> c_int;
     fn __gmpz_import(rop: mpz_ptr, count: size_t, order: c_int, size: size_t,
-                     endian: c_int, nails: size_t, op: *c_void);
+                     endian: c_int, nails: size_t, op: *const c_void);
     fn __gmp_randinit_default(state: gmp_randstate_t);
     fn __gmp_randinit_mt(state: gmp_randstate_t);
     fn __gmp_randinit_lc_2exp(state: gmp_randstate_t, a: mpz_srcptr, c: c_ulong, m2exp: mp_bitcnt_t);
     fn __gmp_randinit_lc_2exp_size(state: gmp_randstate_t, size: mp_bitcnt_t);
-    fn __gmp_randinit_set(state: gmp_randstate_t, op: *gmp_randstate_struct);
+    fn __gmp_randinit_set(state: gmp_randstate_t, op: *const gmp_randstate_struct);
     fn __gmp_randclear(state: gmp_randstate_t);
     fn __gmp_randseed(state: gmp_randstate_t, seed: mpz_srcptr);
     fn __gmp_randseed_ui(state: gmp_randstate_t, seed: c_ulong);
@@ -139,7 +141,7 @@ extern "C" {
 }
 
 pub struct Mpz {
-    priv mpz: mpz_struct,
+    mpz: mpz_struct,
 }
 
 impl Drop for Mpz {
@@ -149,7 +151,7 @@ impl Drop for Mpz {
 impl Mpz {
     pub fn new() -> Mpz {
         unsafe {
-            let mut mpz = uninit();
+            let mut mpz = uninitialized();
             __gmpz_init(&mut mpz);
             Mpz { mpz: mpz }
         }
@@ -157,7 +159,7 @@ impl Mpz {
 
     pub fn new_reserve(n: c_ulong) -> Mpz {
         unsafe {
-            let mut mpz = uninit();
+            let mut mpz = uninitialized();
             __gmpz_init2(&mut mpz, n);
             Mpz { mpz: mpz }
         }
@@ -172,7 +174,7 @@ impl Mpz {
     pub fn from_str_radix(s: &str, base: uint) -> Option<Mpz> {
         unsafe {
             assert!(base == 0 || (base >= 2 && base <= 62));
-            let mut mpz = uninit();
+            let mut mpz = uninitialized();
             let r = s.with_c_str(|s| {
                 __gmpz_init_set_str(&mut mpz, s, base as c_int)
             });
@@ -273,14 +275,15 @@ impl Mpz {
 impl Clone for Mpz {
     fn clone(&self) -> Mpz {
         unsafe {
-            let mut mpz = uninit();
+            let mut mpz = uninitialized();
             __gmpz_init_set(&mut mpz, &self.mpz);
             Mpz { mpz: mpz }
         }
     }
 }
 
-impl cmp::Eq for Mpz {
+impl cmp::Eq for Mpz {}
+impl cmp::PartialEq for Mpz {
     fn eq(&self, other: &Mpz) -> bool {
         unsafe { __gmpz_cmp(&self.mpz, &other.mpz) == 0 }
     }
@@ -289,21 +292,24 @@ impl cmp::Eq for Mpz {
     }
 }
 
-impl cmp::Ord for Mpz {
-    fn lt(&self, other: &Mpz) -> bool {
-        unsafe { __gmpz_cmp(&self.mpz, &other.mpz) < 0 }
-    }
-    fn le(&self, other: &Mpz) -> bool {
-        unsafe { __gmpz_cmp(&self.mpz, &other.mpz) <= 0 }
-    }
-    fn gt(&self, other: &Mpz) -> bool {
-        unsafe { __gmpz_cmp(&self.mpz, &other.mpz) > 0 }
-    }
-    fn ge(&self, other: &Mpz) -> bool {
-        unsafe { __gmpz_cmp(&self.mpz, &other.mpz) >= 0 }
+impl cmp::PartialOrd for Mpz {
+    fn partial_cmp(&self, other: &Mpz) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
+impl cmp::Ord for Mpz {
+    fn cmp(&self, other: &Mpz) -> Ordering {
+        let c = unsafe { __gmpz_cmp(&self.mpz, &other.mpz) };
+        if c < 0 {
+            Less
+        } else if c == 0 {
+            Equal
+        } else {
+            Greater
+        }
+    }
+}
 impl Add<Mpz, Mpz> for Mpz {
     fn add(&self, other: &Mpz) -> Mpz {
         unsafe {
@@ -338,7 +344,7 @@ impl Div<Mpz, Mpz> for Mpz {
     fn div(&self, other: &Mpz) -> Mpz {
         unsafe {
             if self.is_zero() {
-                fail!(~"divide by zero")
+                fail!("divide by zero")
             }
 
             let mut res = Mpz::new();
@@ -352,7 +358,7 @@ impl Rem<Mpz, Mpz> for Mpz {
     fn rem(&self, other: &Mpz) -> Mpz {
         unsafe {
             if self.is_zero() {
-                fail!(~"divide by zero")
+                fail!("divide by zero")
             }
 
             let mut res = Mpz::new();
@@ -374,10 +380,10 @@ impl Neg<Mpz> for Mpz {
 
 impl ToPrimitive for Mpz {
     fn to_i64(&self) -> Option<i64> {
-        fail!(~"not implemented")
+        fail!("not implemented")
     }
     fn to_u64(&self) -> Option<u64> {
-        fail!(~"not implemented")
+        fail!("not implemented")
     }
 }
 
@@ -386,7 +392,7 @@ impl FromPrimitive for Mpz {
         unsafe {
             let mut res = Mpz::new();
             __gmpz_import(&mut res.mpz, 1, 1, size_of::<u64>() as size_t, 0, 0,
-                          &other as *u64 as *c_void);
+                          &other as *const u64 as *const c_void);
             Some(res)
         }
     }
@@ -394,7 +400,7 @@ impl FromPrimitive for Mpz {
         unsafe {
             let mut res = Mpz::new();
             __gmpz_import(&mut res.mpz, 1, 1, size_of::<i64>() as size_t, 0, 0,
-                          &other.abs() as *i64 as *c_void);
+                          &other.abs() as *const i64 as *const c_void);
             if other.is_negative() {
                 __gmpz_neg(&mut res.mpz, &res.mpz)
             }
@@ -406,7 +412,7 @@ impl FromPrimitive for Mpz {
 impl One for Mpz {
     fn one() -> Mpz {
         unsafe {
-            let mut mpz = uninit();
+            let mut mpz = uninitialized();
             __gmpz_init_set_ui(&mut mpz, 1);
             Mpz { mpz: mpz }
         }
@@ -478,23 +484,20 @@ impl FromStr for Mpz {
 
 impl ToStrRadix for Mpz {
     // TODO: fail on an invalid base
-    fn to_str_radix(&self, base: uint) -> ~str {
+    fn to_str_radix(&self, base: uint) -> String {
         unsafe {
             // Extra two bytes are for possible minus sign and null terminator
             let len = __gmpz_sizeinbase(&self.mpz, base as c_int) as uint + 2;
 
             // Allocate and write into a raw *c_char of the correct length
-            let mut vector: ~[u8] = slice::with_capacity(len);
+            let mut vector: Vec<u8> = Vec::with_capacity(len);
             vector.set_len(len);
 
-            let mut cstr = vector.to_c_str_unchecked();
-            cstr.with_mut_ref(|raw| -> () {
-                __gmpz_get_str(raw, base as c_int, &self.mpz);
-            });
+            __gmpz_get_str(vector.as_mut_ptr() as *mut i8, base as c_int, &self.mpz);
 
-            match cstr.as_str() {
-                Some(slice) => slice.to_owned(),
-                None        => fail!("GMP returned invalid UTF-8!")
+            match String::from_utf8(vector) {
+                Ok(s)  => s,
+                Err(_) => fail!("GMP returned invalid UTF-8!")
             }
         }
     }
@@ -502,13 +505,13 @@ impl ToStrRadix for Mpz {
 
 impl fmt::Show for Mpz {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f.buf, "{}", self.to_str_radix(10))
+        write!(f, "{}", self.to_str_radix(10))
     }
 }
 
 
 pub struct RandState {
-    priv state: gmp_randstate_struct,
+    state: gmp_randstate_struct,
 }
 
 impl Drop for RandState {
@@ -520,7 +523,7 @@ impl Drop for RandState {
 impl RandState {
     pub fn new() -> RandState {
         unsafe {
-            let mut state: gmp_randstate_struct = uninit();
+            let mut state: gmp_randstate_struct = uninitialized();
             __gmp_randinit_default(&mut state);
             RandState { state: state }
         }
@@ -528,7 +531,7 @@ impl RandState {
 
     pub fn new_mt() -> RandState {
         unsafe {
-            let mut state: gmp_randstate_struct = uninit();
+            let mut state: gmp_randstate_struct = uninitialized();
             __gmp_randinit_mt(&mut state);
             RandState { state: state }
         }
@@ -536,7 +539,7 @@ impl RandState {
 
     pub fn new_lc_2exp(a: Mpz, c: c_ulong, m2exp: c_ulong) -> RandState {
         unsafe {
-            let mut state: gmp_randstate_struct = uninit();
+            let mut state: gmp_randstate_struct = uninitialized();
             __gmp_randinit_lc_2exp(&mut state, &a.mpz, c, m2exp);
             RandState { state: state }
         }
@@ -544,7 +547,7 @@ impl RandState {
 
     pub fn new_lc_2exp_size(size: c_ulong) -> RandState {
         unsafe {
-            let mut state: gmp_randstate_struct = uninit();
+            let mut state: gmp_randstate_struct = uninitialized();
             __gmp_randinit_lc_2exp_size(&mut state, size);
             RandState { state: state }
         }
@@ -580,7 +583,7 @@ impl RandState {
 impl Clone for RandState {
     fn clone(&self) -> RandState {
         unsafe {
-            let mut state: gmp_randstate_struct = uninit();
+            let mut state: gmp_randstate_struct = uninitialized();
             __gmp_randinit_set(&mut state, &self.state);
             RandState { state: state }
         }
@@ -588,7 +591,7 @@ impl Clone for RandState {
 }
 
 pub struct Mpq {
-    priv mpq: mpq_struct,
+    mpq: mpq_struct,
 }
 
 impl Drop for Mpq {
@@ -598,7 +601,7 @@ impl Drop for Mpq {
 impl Mpq {
     pub fn new() -> Mpq {
         unsafe {
-            let mut mpq = uninit();
+            let mut mpq = uninitialized();
             __gmpq_init(&mut mpq);
             Mpq { mpq: mpq }
         }
@@ -647,7 +650,7 @@ impl Mpq {
     pub fn invert(&self) -> Mpq {
         unsafe {
             if self.is_zero() {
-                fail!(~"divide by zero")
+                fail!("divide by zero")
             }
 
             let mut res = Mpq::new();
@@ -664,8 +667,8 @@ impl Clone for Mpq {
         res
     }
 }
-
-impl cmp::Eq for Mpq {
+impl cmp::Eq for Mpq {}
+impl cmp::PartialEq for Mpq {
     fn eq(&self, other: &Mpq) -> bool {
         unsafe { __gmpq_equal(&self.mpq, &other.mpq) != 0 }
     }
@@ -674,18 +677,22 @@ impl cmp::Eq for Mpq {
     }
 }
 
+impl cmp::PartialOrd for Mpq {
+    fn partial_cmp(&self, other: &Mpq) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl cmp::Ord for Mpq {
-    fn lt(&self, other: &Mpq) -> bool {
-        unsafe { __gmpq_cmp(&self.mpq, &other.mpq) < 0 }
-    }
-    fn le(&self, other: &Mpq) -> bool {
-        unsafe { __gmpq_cmp(&self.mpq, &other.mpq) <= 0 }
-    }
-    fn gt(&self, other: &Mpq) -> bool {
-        unsafe { __gmpq_cmp(&self.mpq, &other.mpq) > 0 }
-    }
-    fn ge(&self, other: &Mpq) -> bool {
-        unsafe { __gmpq_cmp(&self.mpq, &other.mpq) >= 0 }
+    fn cmp(&self, other: &Mpq) -> Ordering {
+        let c = unsafe { __gmpq_cmp(&self.mpq, &other.mpq) };
+        if c < 0 {
+            Less
+        } else if c == 0 {
+            Equal
+        } else {
+            Greater
+        }
     }
 }
 
@@ -723,7 +730,7 @@ impl Div<Mpq, Mpq> for Mpq {
     fn div(&self, other: &Mpq) -> Mpq {
         unsafe {
             if self.is_zero() {
-                fail!(~"divide by zero")
+                fail!("divide by zero")
             }
 
             let mut res = Mpq::new();
@@ -745,10 +752,10 @@ impl Neg<Mpq> for Mpq {
 
 impl ToPrimitive for Mpq {
     fn to_i64(&self) -> Option<i64> {
-        fail!(~"not implemented")
+        fail!("not implemented")
     }
     fn to_u64(&self) -> Option<u64> {
-        fail!(~"not implemented")
+        fail!("not implemented")
     }
 }
 
@@ -781,7 +788,7 @@ impl Zero for Mpq {
 }
 
 pub struct Mpf {
-    priv mpf: mpf_struct,
+    mpf: mpf_struct,
 }
 
 impl Drop for Mpf {
@@ -791,7 +798,7 @@ impl Drop for Mpf {
 impl Mpf {
     pub fn new(precision: c_ulong) -> Mpf {
         unsafe {
-            let mut mpf = uninit();
+            let mut mpf = uninitialized();
             __gmpf_init2(&mut mpf, precision);
             Mpf { mpf: mpf }
         }
@@ -854,14 +861,15 @@ impl Mpf {
 impl Clone for Mpf {
     fn clone(&self) -> Mpf {
         unsafe {
-            let mut mpf = uninit();
+            let mut mpf = uninitialized();
             __gmpf_init_set(&mut mpf, &self.mpf);
             Mpf { mpf: mpf }
         }
     }
 }
 
-impl cmp::Eq for Mpf {
+impl cmp::Eq for Mpf {}
+impl cmp::PartialEq for Mpf {
     fn eq(&self, other: &Mpf) -> bool {
         unsafe { __gmpf_cmp(&self.mpf, &other.mpf) == 0 }
     }
@@ -870,18 +878,21 @@ impl cmp::Eq for Mpf {
     }
 }
 
+impl cmp::PartialOrd for Mpf {
+    fn partial_cmp(&self, other: &Mpf) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
 impl cmp::Ord for Mpf {
-    fn lt(&self, other: &Mpf) -> bool {
-        unsafe { __gmpf_cmp(&self.mpf, &other.mpf) < 0 }
-    }
-    fn le(&self, other: &Mpf) -> bool {
-        unsafe { __gmpf_cmp(&self.mpf, &other.mpf) <= 0 }
-    }
-    fn gt(&self, other: &Mpf) -> bool {
-        unsafe { __gmpf_cmp(&self.mpf, &other.mpf) > 0 }
-    }
-    fn ge(&self, other: &Mpf) -> bool {
-        unsafe { __gmpf_cmp(&self.mpf, &other.mpf) >= 0 }
+    fn cmp(&self, other: &Mpf) -> Ordering {
+        let c = unsafe {__gmpf_cmp(&self.mpf, &other.mpf)};
+        if c < 0 {
+            Less
+        } else if c == 0 {
+            Equal
+        } else {
+            Greater
+        }
     }
 }
 
@@ -922,7 +933,7 @@ impl Div<Mpf, Mpf> for Mpf {
     fn div(&self, other: &Mpf) -> Mpf {
         unsafe {
             if __gmpf_cmp_ui(&self.mpf, 0) == 0 {
-                fail!(~"divide by zero")
+                fail!("divide by zero")
             }
 
             let mut res = Mpf::new(cmp::max(self.get_prec() as uint,
@@ -948,7 +959,7 @@ mod test_mpz {
     use super::*;
     use std::from_str::FromStr;
     use std::num::One;
-    use std::libc::c_ulong;
+    use libc::c_ulong;
 
     #[test]
     fn test_set() {
@@ -1051,14 +1062,15 @@ mod test_mpz {
 
     #[test]
     fn test_to_str_radix() {
+        use std::num::ToStrRadix;
         let x: Mpz = FromPrimitive::from_int(255).unwrap();
-        assert!(x.to_str_radix(16) == ~"ff");
+        assert!(x.to_str_radix(16).as_slice() == "ff");
     }
 
     #[test]
     fn test_to_str() {
         let x: Mpz = FromStr::from_str("1234567890").unwrap();
-        assert!(x.to_str() == ~"1234567890");
+        assert!(x.to_str().as_slice() == "1234567890");
     }
 
     #[test]
@@ -1079,7 +1091,7 @@ mod test_mpz {
     #[test]
     fn test_from_int() {
         let x: Mpz = FromPrimitive::from_int(150).unwrap();
-        assert!(x.to_str() == ~"150");
+        assert!(x.to_str().as_slice() == "150");
         assert!(x == FromStr::from_str("150").unwrap());
     }
 
@@ -1293,4 +1305,3 @@ mod test_mpf {
         x / x;
     }
 }
-
