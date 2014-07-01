@@ -7,7 +7,9 @@
 #![feature(globs)]
 #![allow(non_camel_case_types)]
 
-use std::libc::{c_char, c_double, c_int, c_long, c_ulong, c_void, size_t};
+extern crate libc;
+
+use libc::{c_char, c_double, c_int, c_long, c_ulong, c_void, size_t};
 use std::num::{One, Zero, ToStrRadix};
 use std::mem::{uninit,size_of};
 use std::{cmp, fmt, slice};
