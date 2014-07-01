@@ -6,4 +6,6 @@ authors = ["thestinger", "huonw"]
 
 [[lib]]
 
+src = "gmp.rs"
+
 name = "rust-gmp"
