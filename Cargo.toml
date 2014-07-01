@@ -1,0 +1,9 @@
+[package]
+
+name = "gmp"
+version = "0.1.0"
+authors = ["thestinger", "huonw"]
+
+[[bin]]
+
+name = "rust-gmp"
