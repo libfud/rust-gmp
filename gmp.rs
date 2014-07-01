@@ -388,7 +388,7 @@ impl FromPrimitive for Mpz {
         unsafe {
             let mut res = Mpz::new();
             __gmpz_import(&mut res.mpz, 1, 1, size_of::<u64>() as size_t, 0, 0,
-                          &other as *u64 as *c_void);
+                          &other as *const u64 as *const c_void);
             Some(res)
         }
     }
@@ -396,7 +396,7 @@ impl FromPrimitive for Mpz {
         unsafe {
             let mut res = Mpz::new();
             __gmpz_import(&mut res.mpz, 1, 1, size_of::<i64>() as size_t, 0, 0,
-                          &other.abs() as *i64 as *c_void);
+                          &other.abs() as *const i64 as *const c_void);
             if other.is_negative() {
                 __gmpz_neg(&mut res.mpz, &res.mpz)
             }
