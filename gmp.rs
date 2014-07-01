@@ -510,7 +510,7 @@ impl fmt::Show for Mpz {
 
 
 pub struct RandState {
-    priv state: gmp_randstate_struct,
+    state: gmp_randstate_struct,
 }
 
 impl Drop for RandState {
@@ -590,7 +590,7 @@ impl Clone for RandState {
 }
 
 pub struct Mpq {
-    priv mpq: mpq_struct,
+    mpq: mpq_struct,
 }
 
 impl Drop for Mpq {
@@ -783,7 +783,7 @@ impl Zero for Mpq {
 }
 
 pub struct Mpf {
-    priv mpf: mpf_struct,
+    mpf: mpf_struct,
 }
 
 impl Drop for Mpf {
