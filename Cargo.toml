@@ -8,4 +8,4 @@ authors = ["thestinger", "huonw"]
 
 src = "gmp.rs"
 
-name = "libgmp"
+name = "gmp"
