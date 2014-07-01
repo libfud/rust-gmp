@@ -480,7 +480,7 @@ impl FromStr for Mpz {
 
 impl ToStrRadix for Mpz {
     // TODO: fail on an invalid base
-    fn to_str_radix(&self, base: uint) -> str {
+    fn to_str_radix(&self, base: uint) -> String {
         unsafe {
             // Extra two bytes are for possible minus sign and null terminator
             let len = __gmpz_sizeinbase(&self.mpz, base as c_int) as uint + 2;
